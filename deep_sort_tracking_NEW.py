@@ -4,15 +4,11 @@ Deep SORT with various object detection models.
 USAGE:
 python deep_sort_tracking.py 
 python deep_sort_tracking.py --threshold 0.5 --imgsz 320
-python deep_sort_tracking.py --threshold 0.5 --model fasterrcnn_resnet50_fpn_v2
-                                                     fasterrcnn_resnet50_fpn
-                                                     fasterrcnn_mobilenet_v3_large_fpn
-                                                     fasterrcnn_mobilenet_v3_large_320_fpn
-                                                     fcos_resnet50_fpn
-                                                     ssd300_vgg16
-                                                     ssdlite320_mobilenet_v3_large
-                                                     retinanet_resnet50_fpn
-                                                     retinanet_resnet50_fpn_v2
+python deep_sort_tracking.py --threshold 0.5 --model  'yolov8n',
+                                                      'yolov8s',
+                                                      'yolov8m',
+                                                      'yolov8l',
+                                                      'yolov8x'
 """
 
 import torch
@@ -25,7 +21,7 @@ import numpy as np
 
 from torchvision.transforms import ToTensor
 from deep_sort_realtime.deepsort_tracker import DeepSort
-from utils import convert_detections, annotate
+from utils_NEW import convert_detections, annotate
 from coco_classes import COCO_91_CLASSES
 
 parser = argparse.ArgumentParser()
@@ -42,18 +38,14 @@ parser.add_argument(
 )
 parser.add_argument(
     '--model',
-    default='fasterrcnn_resnet50_fpn_v2',
+    default='yolov8n',
     help='model name',
     choices=[
-        'fasterrcnn_resnet50_fpn_v2',
-        'fasterrcnn_resnet50_fpn',
-        'fasterrcnn_mobilenet_v3_large_fpn',
-        'fasterrcnn_mobilenet_v3_large_320_fpn',
-        'fcos_resnet50_fpn',
-        'ssd300_vgg16',
-        'ssdlite320_mobilenet_v3_large',
-        'retinanet_resnet50_fpn',
-        'retinanet_resnet50_fpn_v2'
+        'yolov8n',
+        'yolov8s',
+        'yolov8m',
+        'yolov8l',
+        'yolov8x'
     ]
 )
 parser.add_argument(
@@ -104,9 +96,7 @@ print(f"Detector: {args.model}")
 print(f"Re-ID embedder: {args.embedder}")
 
 # Load model.
-model = getattr(torchvision.models.detection, args.model)(weights='DEFAULT')
-# Set model to evaluation mode.
-model.eval().to(device)
+model = YOLO(args.model)
 
 # Initialize a SORT tracker object.
 tracker = DeepSort(max_age=30, embedder=args.embedder)
@@ -138,20 +128,32 @@ while cap.isOpened():
             )
         else:
             resized_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        # Convert frame to tensor and send it to device (cpu or cuda).
-        frame_tensor = ToTensor()(resized_frame).to(device)
+
 
         start_time = time.time()
         # Feed frame to model and get detections.
         det_start_time = time.time()
-        with torch.no_grad():
-            detections = model([frame_tensor])[0]
+        results = model.predict(source=resized_frame, save=False, classes=0, conf=0.5)
         det_end_time = time.time()
 
         det_fps = 1 / (det_end_time - det_start_time)
-    
+
+            
         # Convert detections to Deep SORT format.
-        detections = convert_detections(detections, args.threshold, args.cls)
+        # Convert boxes to [x1, y1, w, h, score] format.
+        # Append ([x, y, w, h], score, label_string).
+        # Process results list
+        for result in results:
+          detections = []
+          for r in range(len(result)):
+            x = result[r].boxes.xywh.tolist()[0][0]
+            y = result[r].boxes.xywh.tolist()[0][1]
+            w = result[r].boxes.xywh.tolist()[0][2]
+            h = result[r].boxes.xywh.tolist()[0][3]
+            conf = result[r].boxes.conf.tolist()[0]
+            cls = result[r].boxes.cls.tolist()[0]
+            detections.append(([int(x), int(y), int(w), int(h)], conf, int(cls)))
+
     
         # Update tracker with detections.
         track_start_time = time.time()
