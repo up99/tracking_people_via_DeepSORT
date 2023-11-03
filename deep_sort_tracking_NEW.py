@@ -21,9 +21,11 @@ import numpy as np
 
 from torchvision.transforms import ToTensor
 from deep_sort_realtime.deepsort_tracker import DeepSort
-from utils_NEW import convert_detections, annotate
+from utils_NEW import convert_detections, annotate, draw_boxes
 from coco_classes import COCO_91_CLASSES
+from collections import deque
 
+data_deque = {}
 parser = argparse.ArgumentParser()
 parser.add_argument(
     '--input', 
@@ -172,16 +174,23 @@ while cap.isOpened():
               f"Detection FPS: {det_fps:.1f},", 
               f"Tracking FPS: {track_fps:.1f}, Total FPS: {fps:.1f}")
         # Draw bounding boxes and labels on frame.
+        # if len(tracks) > 0:
+        #     frame = annotate(
+        #         tracks, 
+        #         frame, 
+        #         resized_frame,
+        #         frame_width,
+        #         frame_height,
+        #         COLORS
+        #     )
+
         if len(tracks) > 0:
-            frame = annotate(
-                tracks, 
-                frame, 
-                resized_frame,
-                frame_width,
-                frame_height,
-                COLORS
-            )
-        cv2.putText(
+            bbox_xyxy = outputs[:, :4]
+            identities = outputs[:, -2]
+            object_id = outputs[:, -1]
+            draw_boxes(frame, bbox_xyxy, object_id, identities)
+        
+      cv2.putText(
             frame,
             f"FPS: {fps:.1f}",
             (int(20), int(40)),
