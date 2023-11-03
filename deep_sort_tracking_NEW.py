@@ -30,7 +30,7 @@ data_deque = {}
 parser = argparse.ArgumentParser()
 parser.add_argument(
     '--input', 
-    default='input/mvmhat_1_1.mp4',
+    default='tracking_people_via_DeepSORT/HallWayTracking/videos/001.avi',
     help='path to input video',
 )
 parser.add_argument(
@@ -53,7 +53,7 @@ parser.add_argument(
 )
 parser.add_argument(
     '--threshold',
-    default=0.8,
+    default=0.5,
     help='score threshold to filter out detections',
     type=float
 )
