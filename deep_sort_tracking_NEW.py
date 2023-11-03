@@ -208,8 +208,8 @@ while cap.isOpened():
             # Press q to quit.
             if cv2.waitKey(1) & 0xFF == ord("q"):
                 break
-    else:
-        break
+  else:
+    break
     
 # Release resources.
 cap.release()
