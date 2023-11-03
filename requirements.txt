@@ -2,3 +2,5 @@ torch
 torchvision
 opencv-python
 deep_sort_realtime
+ultralytics
+numpy
