@@ -24,6 +24,7 @@ from deep_sort_realtime.deepsort_tracker import DeepSort
 from utils_NEW import convert_detections, annotate, draw_boxes
 from coco_classes import COCO_91_CLASSES
 from collections import deque
+from ultralytics import YOLO
 
 data_deque = {}
 parser = argparse.ArgumentParser()
