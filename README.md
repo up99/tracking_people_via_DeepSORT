@@ -11,6 +11,11 @@ usage: deep_sort_tracking_NEW.py [-h] [--input INPUT] [--imgsz IMGSZ]
                                  [--embedder {mobilenet,torchreid,clip_RN50,clip_RN101,clip_RN50x4,clip_RN50x16,clip_ViT-B/32,clip_ViT-B/16}]
                                  [--show]
 
+Пример работы deep_sort_tracking_NEW.py представлен ниже
+https://github.com/up99/tracking_people_via_DeepSORT/assets/62401614/8f503ace-9737-4236-a47b-41097349b1d5
+
+
+
 ### 2) deep_sort_tracking.py 
 Взят за основу из источника <https://github.com/spmallick/learnopencv/tree/master/Real_Time_Deep_SORT_using_Torchvision_Detectors>
 Можно использовать и его. Синтаксис запроса аналогичный. Однако из детекторов используются Region based CNN, поэтому время работы увеличивается. 
