@@ -21,16 +21,72 @@ import numpy as np
 
 from torchvision.transforms import ToTensor
 from deep_sort_realtime.deepsort_tracker import DeepSort
-from utils_NEW import convert_detections, annotate, draw_boxes
+# from utils_NEW import convert_detections, draw_boxes
+from utils_NEW import annotate
 from coco_classes import COCO_91_CLASSES
 from collections import deque
 from ultralytics import YOLO
-
+from collections import deque
 data_deque = {}
+
+# Function for bounding box and ID annotation.
+def annotate(tracks, frame, resized_frame, frame_width, frame_height, colors):
+    for track in tracks:
+        if not track.is_confirmed():
+            continue
+        track_id = track.track_id
+        track_class = track.det_class
+        x1, y1, x2, y2 = track.to_ltrb()
+        p1 = (int(x1/resized_frame.shape[1]*frame_width), int(y1/resized_frame.shape[0]*frame_height))
+        p2 = (int(x2/resized_frame.shape[1]*frame_width), int(y2/resized_frame.shape[0]*frame_height))
+        # Annotate boxes.
+        color = colors[int(track_class)]
+        cv2.rectangle(
+            frame, 
+            p1, 
+            p2, 
+            color=(255, 0, 0), 
+            thickness=2
+        )
+        # Annotate ID.
+        cv2.putText(
+            frame, f"ID: {track_id}", 
+            (p1[0], p1[1] - 10), 
+            cv2.FONT_HERSHEY_SIMPLEX, 
+            0.5, 
+            (0, 255, 0), 
+            2,
+            lineType=cv2.LINE_AA
+        )
+        # code to find center of bottom edge
+            
+        center = (int((x2+x1)/ 2), int((y2+y2)/2))
+        # add center to buffer
+
+        # create new buffer for new object
+        if track_id not in data_deque:  
+            data_deque[track_id] = deque(maxlen=64)
+        obj_name = 'Person'
+        label = f'{track_id}: {obj_name}'
+
+        # add center to buffer
+        data_deque[track_id].appendleft(center)
+        # draw trail
+        for i in range(1, len(data_deque[track_id])):
+            # check if on buffer value is none
+            if data_deque[track_id][i - 1] is None or data_deque[track_id][i] is None:
+                continue
+            # generate dynamic thickness of trails
+            thickness = int(np.sqrt(64 / float(i + i)) * 1.5)
+            # draw trails
+            cv2.line(frame, data_deque[track_id][i - 1], data_deque[track_id][i], (255,0,0), thickness)
+    return frame
+
+
 parser = argparse.ArgumentParser()
 parser.add_argument(
     '--input', 
-    default='tracking_people_via_DeepSORT/HallWayTracking/videos/001.avi',
+    default='HallWayTracking/videos/001.avi',
     help='path to input video',
 )
 parser.add_argument(
@@ -77,24 +133,34 @@ parser.add_argument(
     action='store_true',
     help='visualize results in real-time on screen'
 )
-parser.add_argument(
-    '--cls', 
-    nargs='+',
-    default=[1],
-    help='which classes to track',
-    type=int
-)
+# parser.add_argument(
+#     '--cls', 
+#     nargs='+',
+#     default=[1],
+#     help='which classes to track',
+#     type=int
+# )
 args = parser.parse_args()
 
 np.random.seed(42)
 
-OUT_DIR = 'outputs'
-os.makedirs(OUT_DIR, exist_ok=True)
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+# setting device on GPU if available, else CPU
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+print('Using device:', device)
+print()
+
+#Additional Info when using cuda
+if device.type == 'cuda':
+    print(torch.cuda.get_device_name(0))
+    print('Memory Usage:')
+    print('Allocated:', round(torch.cuda.memory_allocated(0)/1024**3,1), 'GB')
+    print('Cached:   ', round(torch.cuda.memory_reserved(0)/1024**3,1), 'GB')
+
+
 COLORS = np.random.randint(0, 255, size=(len(COCO_91_CLASSES), 3))
 
-print(f"Tracking: {[COCO_91_CLASSES[idx] for idx in args.cls]}")
+print(f"Tracking: People")
 print(f"Detector: {args.model}")
 print(f"Re-ID embedder: {args.embedder}")
 
@@ -105,15 +171,27 @@ model = YOLO(args.model)
 tracker = DeepSort(max_age=30, embedder=args.embedder)
 
 VIDEO_PATH = args.input
+print("video path", VIDEO_PATH)
 cap = cv2.VideoCapture(VIDEO_PATH)
 frame_width = int(cap.get(3))
 frame_height = int(cap.get(4))
 frame_fps = int(cap.get(5))
 frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-save_name = VIDEO_PATH.split(os.path.sep)[-1].split('.')[0]
-# Define codec and create VideoWriter object.
+if VIDEO_PATH.split(os.path.sep)[-1].split('.')[0].split("/")[-1] != None:
+    save_name = VIDEO_PATH.split(os.path.sep)[-1].split('.')[0].split("/")[-1]
+else:
+    save_name = time.strftime("%H:%M:%S", time.localtime())
+
+print("save_name", save_name)
+print("full save name", f"{save_name}_{args.model}_{args.embedder}.mp4")
+# out = cv2.VideoWriter(
+#     f"results.mp4", 
+#     cv2.VideoWriter_fourcc('m', 'p', '4', 'v'), frame_fps, 
+#     (frame_width, frame_height)
+# )
+
 out = cv2.VideoWriter(
-    f"{OUT_DIR}/{save_name}_{args.model}_{args.embedder}.mp4", 
+    f"{save_name}_{args.model}_{args.embedder}.mp4", 
     cv2.VideoWriter_fourcc(*'mp4v'), frame_fps, 
     (frame_width, frame_height)
 )
@@ -153,16 +231,22 @@ while cap.isOpened():
             y = result[r].boxes.xywh.tolist()[0][1]
             w = result[r].boxes.xywh.tolist()[0][2]
             h = result[r].boxes.xywh.tolist()[0][3]
+            x = x - w/2
+            y = y - h/2
             conf = result[r].boxes.conf.tolist()[0]
             cls = result[r].boxes.cls.tolist()[0]
             detections.append(([int(x), int(y), int(w), int(h)], conf, int(cls)))
 
-    
+
         # Update tracker with detections.
         track_start_time = time.time()
         tracks = tracker.update_tracks(detections, frame=frame)
         track_end_time = time.time()
-        track_fps = 1 / (track_end_time - track_start_time)
+        ZNAMENATEL_HARDCODED = track_end_time - track_start_time # somehow sometimes it equals zero
+        if ZNAMENATEL_HARDCODED != 0:
+            track_fps = 1 / ZNAMENATEL_HARDCODED
+        else:
+            track_fps = 10.0 # HARDCODED VALUE (FALSE VALUE)
 
         end_time = time.time()
         fps = 1 / (end_time - start_time)
@@ -175,25 +259,18 @@ while cap.isOpened():
               f"Detection FPS: {det_fps:.1f},", 
               f"Tracking FPS: {track_fps:.1f}, Total FPS: {fps:.1f}")
         # Draw bounding boxes and labels on frame.
-        # if len(tracks) > 0:
-        #     frame = annotate(
-        #         tracks, 
-        #         frame, 
-        #         resized_frame,
-        #         frame_width,
-        #         frame_height,
-        #         COLORS
-        #     )
-
         if len(tracks) > 0:
-            bbox_xyxy = tracks[:, :4]
-            identities = tracks[:, -2]
-            object_id = tracks[:, -1]
-            draw_boxes(frame, bbox_xyxy, object_id, identities)
+            frame = annotate(
+                tracks, 
+                frame, 
+                resized_frame,
+                frame_width,
+                frame_height,
+                COLORS
+            )
         
-      cv2.putText(
-            frame,
-            f"FPS: {fps:.1f}",
+        cv2.putText(frame,
+            f'FPS: {fps:.1f}',
             (int(20), int(40)),
             fontFace=cv2.FONT_HERSHEY_SIMPLEX,
             fontScale=1,
@@ -209,8 +286,9 @@ while cap.isOpened():
             if cv2.waitKey(1) & 0xFF == ord("q"):
                 break
     else:
-      break
+        break
     
 # Release resources.
 cap.release()
+out.release()
 cv2.destroyAllWindows()
