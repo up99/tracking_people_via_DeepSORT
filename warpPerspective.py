@@ -27,6 +27,7 @@ if cap.isOpened():
         # converting to gray-scale 
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) 
         #warped = skimage.transform.warp(frame, H)
+        #Необходимо делать преобразование над треком, а не всем изображением. Но достичь этого не удалось.
         new_frame = cv2.warpPerspective(frame, H, (frame_width, frame_height))
 
         cv2.imshow('input',frame)
