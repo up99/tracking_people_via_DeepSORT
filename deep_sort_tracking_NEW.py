@@ -30,19 +30,17 @@ from collections import deque
 data_deque = {}
 
 # Function for bounding box and ID annotation.
-def annotate(tracks, frame, resized_frame, frame_width, frame_height, colors):
-    for track in tracks:
+def annotate(tracks1, resized_frame1, frame_width1, frame_height1):
+    for track in tracks1:
         if not track.is_confirmed():
             continue
         track_id = track.track_id
-        track_class = track.det_class
+        #track_class = track.det_class
         x1, y1, x2, y2 = track.to_ltrb()
-        p1 = (int(x1/resized_frame.shape[1]*frame_width), int(y1/resized_frame.shape[0]*frame_height))
-        p2 = (int(x2/resized_frame.shape[1]*frame_width), int(y2/resized_frame.shape[0]*frame_height))
-        # Annotate boxes.
-        color = colors[int(track_class)]
+        p1 = (int(x1/resized_frame1.shape[1]*frame_width1), int(y1/resized_frame1.shape[0]*frame_height1))
+        p2 = (int(x2/resized_frame1.shape[1]*frame_width1), int(y2/resized_frame1.shape[0]*frame_height1))
         cv2.rectangle(
-            frame, 
+            resized_frame1, 
             p1, 
             p2, 
             color=(255, 0, 0), 
@@ -50,7 +48,7 @@ def annotate(tracks, frame, resized_frame, frame_width, frame_height, colors):
         )
         # Annotate ID.
         cv2.putText(
-            frame, f"ID: {track_id}", 
+            resized_frame1, f"ID: {track_id}", 
             (p1[0], p1[1] - 10), 
             cv2.FONT_HERSHEY_SIMPLEX, 
             0.5, 
@@ -66,8 +64,6 @@ def annotate(tracks, frame, resized_frame, frame_width, frame_height, colors):
         # create new buffer for new object
         if track_id not in data_deque:  
             data_deque[track_id] = deque(maxlen=64)
-        obj_name = 'Person'
-        label = f'{track_id}: {obj_name}'
 
         # add center to buffer
         data_deque[track_id].appendleft(center)
@@ -79,8 +75,8 @@ def annotate(tracks, frame, resized_frame, frame_width, frame_height, colors):
             # generate dynamic thickness of trails
             thickness = int(np.sqrt(64 / float(i + i)) * 1.5)
             # draw trails
-            cv2.line(frame, data_deque[track_id][i - 1], data_deque[track_id][i], (255,0,0), thickness)
-    return frame
+            cv2.line(resized_frame1, data_deque[track_id][i - 1], data_deque[track_id][i], (255,0,0), thickness)
+    return resized_frame1
 
 
 parser = argparse.ArgumentParser()
@@ -158,8 +154,6 @@ if device.type == 'cuda':
     print('Cached:   ', round(torch.cuda.memory_reserved(0)/1024**3,1), 'GB')
 
 
-COLORS = np.random.randint(0, 255, size=(len(COCO_91_CLASSES), 3))
-
 print(f"Tracking: People")
 print(f"Detector: {args.model}")
 print(f"Re-ID embedder: {args.embedder}")
@@ -184,11 +178,7 @@ else:
 
 print("save_name", save_name)
 print("full save name", f"{save_name}_{args.model}_{args.embedder}.mp4")
-# out = cv2.VideoWriter(
-#     f"results.mp4", 
-#     cv2.VideoWriter_fourcc('m', 'p', '4', 'v'), frame_fps, 
-#     (frame_width, frame_height)
-# )
+
 
 out = cv2.VideoWriter(
     f"{save_name}_{args.model}_{args.embedder}.mp4", 
@@ -214,7 +204,7 @@ while cap.isOpened():
         start_time = time.time()
         # Feed frame to model and get detections.
         det_start_time = time.time()
-        results = model.predict(source=resized_frame, save=False, classes=0, conf=0.5)
+        results = model.predict(source=resized_frame, save=False, classes=0, conf = args.threshold)
         det_end_time = time.time()
 
         det_fps = 1 / (det_end_time - det_start_time)
@@ -240,7 +230,7 @@ while cap.isOpened():
 
         # Update tracker with detections.
         track_start_time = time.time()
-        tracks = tracker.update_tracks(detections, frame=frame)
+        tracks = tracker.update_tracks(detections, frame=resized_frame)
         track_end_time = time.time()
         ZNAMENATEL_HARDCODED = track_end_time - track_start_time # somehow sometimes it equals zero
         if ZNAMENATEL_HARDCODED != 0:
@@ -262,11 +252,9 @@ while cap.isOpened():
         if len(tracks) > 0:
             frame = annotate(
                 tracks, 
-                frame, 
                 resized_frame,
                 frame_width,
-                frame_height,
-                COLORS
+                frame_height
             )
         
         cv2.putText(frame,
