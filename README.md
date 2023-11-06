@@ -14,7 +14,10 @@ usage: deep_sort_tracking_NEW.py [-h] [--input INPUT] [--imgsz IMGSZ]
 
 Пример работы deep_sort_tracking_NEW.py представлен ниже (использованы стандартные параметры: YOLOv8 Nano + mobilenet):
 
-https://github.com/up99/tracking_people_via_DeepSORT/assets/62401614/8f503ace-9737-4236-a47b-41097349b1d5
+
+
+https://github.com/up99/tracking_people_via_DeepSORT/assets/62401614/92d4554a-6634-496e-ab89-37d96f364984
+
 
 
 
@@ -25,6 +28,8 @@ https://github.com/up99/tracking_people_via_DeepSORT/assets/62401614/8f503ace-97
 
 ## Задача 2: Отображение пути сверху (bird-eye view)
 За основу взят видеоролик: https://www.youtube.com/watch?v=jvgmnJspjoA
+
+Файл warpPerspective - зачатки выполнения задания. Необходимо с помощью матрицы гомографии делать преобразование над треком, а не всем изображением кадра. Но при попытке интеграции с основной программой возникли недопонимания в реализации задумки.
 
 ## Список использованных ресурсов
 1) https://github.com/spmallick/learnopencv/tree/master/Real_Time_Deep_SORT_using_Torchvision_Detectors (https://www.youtube.com/watch?v=GkZRKaQZ_ys)
