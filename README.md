@@ -1,7 +1,7 @@
 # tracking_people_via_DeepSORT
 
 ## Задача 1: Трекер людей с отображением пройденного пути.
-### 1) deep_sort_tracking_NEW.py 
+### 1) deep_sort_tracking_NEW.py (!!!)
 В качестве детектора используется YOLOv8, натренированная на датасете COCO. Загружается напрямую с сайта Ultralytics. Можно использовать любую версию от Nano до XLarge. Используется Nano, если не задана модель явно.
 В качестве  Re-ID embedder используется mobilenet (если не выбрана другая сеть из списка). Возможные сети для использования: mobilenet, torchreid, clip_RN50, clip_RN101, clip_RN50x4, clip_RN50x16, clip_ViT-B/32, clip_ViT-B/16.
 
@@ -21,7 +21,7 @@ https://github.com/up99/tracking_people_via_DeepSORT/assets/62401614/8f503ace-97
 ### 2) deep_sort_tracking.py 
 Взят за основу из источника <https://github.com/spmallick/learnopencv/tree/master/Real_Time_Deep_SORT_using_Torchvision_Detectors>
 
-Можно использовать и его. Синтаксис запроса аналогичный. Однако из детекторов используются Region based CNN, поэтому время работы увеличивается. 
+Можно использовать и его. Синтаксис запроса аналогичный. Однако из детекторов используются Region based CNN, поэтому время работы увеличивается. Кроме того, не реализована функция отрисовки трека.
 
 ## Задача 2: Отображение пути сверху (bird-eye view)
 За основу взят видеоролик: https://www.youtube.com/watch?v=jvgmnJspjoA
